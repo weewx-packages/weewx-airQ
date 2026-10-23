@@ -18,11 +18,24 @@ temperature, humidity, dewpoint, air pressure
 
 ## Prerequisites
 
-An airQ device reachable from the WeeWX host, its device password, and the
-Python packages `pycryptodomex` and `six` in WeeWX's environment:
+For a pip installation, activate the existing virtual environment that runs
+your WeeWX service before running these commands. Both `python` and `weectl`
+must come from that environment. For a distribution package installation, use
+its `weectl`, with `sudo` if required. Add `--config /path/to/weewx.conf` to the
+extension command when your station configuration is not found automatically.
+
+For Debian or Raspberry Pi OS package installations, install the dependencies
+with `sudo apt install python3-pycryptodome python3-six` instead of pip.
+The pip command below is for WeeWX running in its existing virtual environment.
+
+If pip cannot find a compatible wheel for `pycryptodomex`, its source build
+requires a C compiler and headers for the Python interpreter running WeeWX.
+
+You need an airQ device reachable from the WeeWX host and its device password.
+In the activated WeeWX environment, install the Python packages:
 
 ```sh
-python -m pip install pycryptodomex six
+python -m pip install 'pycryptodomex' 'six'
 ```
 
 `Cryptodome` comes from `pycryptodomex`; Python's base64, HTTP, JSON and threading
@@ -37,12 +50,9 @@ Install the published archive with WeeWX 5's extension installer:
 weectl extension install https://github.com/weewx-packages/catalog/releases/download/airq/v0.9b3.post20261022/airq-0.9b3.post20261022.tar.gz
 ```
 
-Use the `weectl` from your WeeWX environment. Add
-`--config /path/to/weewx.conf` when the station configuration is not found
-automatically. Package installations may require `sudo`; activate the WeeWX
-virtual environment for pip installations. Restart your WeeWX service after
-configuration, for example `sudo systemctl restart weewx` on systemd.
-The installer does not restart it for you.
+Restart your WeeWX service after configuration, for example
+`sudo systemctl restart weewx` on systemd. The installer does not restart it
+for you.
 
 The catalog installer adds `user.airQ_corant.AirqUnits` to `prep_services` and
 `user.airQ_corant.AirqService` to `data_services`. It installs
