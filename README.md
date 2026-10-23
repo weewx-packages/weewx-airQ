@@ -1,43 +1,53 @@
 # weewx-airQ
-Service for WeeWX to retrieve air quality data from the airQ device of Corant GmbH
+WeeWX service for Corant airQ devices over local HTTP, including particulate
+matter, gas readings, indoor climate and device indices. Available readings
+depend on the sensors fitted to each device.
 
-PM<sub>1.0</sub>, PM<sub>2.5</sub>, PM<sub>10.0</sub>, TVOC, 
-CO, CO<sub>2</sub>, O<sub>2</sub>, O<sub>3</sub>, NO<sub>2</sub>, 
+This repository mirrors [roe-dl/weewx-airQ](https://github.com/roe-dl/weewx-airQ).
+The installation below uses the separately repaired catalog archive
+`0.9b3.post20261022`. A GitHub source-branch download does not include those
+packaging repairs.
+
+The catalog targets WeeWX 5.5–5.x and Python 3.10–3.14. The runtime still reports
+0.9b3; the catalog suffix identifies the managed installation layout.
+
+PM<sub>1.0</sub>, PM<sub>2.5</sub>, PM<sub>10.0</sub>, TVOC,
+CO, CO<sub>2</sub>, O<sub>2</sub>, O<sub>3</sub>, NO<sub>2</sub>,
 H<sub>2</sub>S, SO<sub>2</sub>, noise, health index, performance index,
 temperature, humidity, dewpoint, air pressure
 
 ## Prerequisites
 
-The following Python modules are necessary to use this extension:
-* base64
-* Cryptodome.Cipher
-* http.client
-* json
-* threading
+An airQ device reachable from the WeeWX host, its device password, and the
+Python packages `pycryptodomex` and `six` in WeeWX's environment:
 
-It depends on the distribution you use whether those modules are installed
-by default. For Debian this installation should do it:
-```
-sudo apt-get install python3-cryptodome
+```sh
+python -m pip install pycryptodomex six
 ```
 
-User Hartmut was successful with that:
-```
-sudo apt-get install build-essential python3-dev 
-pip3 install pycryptodomex 
-python3 -m Cryptodome.SelfTest 
-```
+`Cryptodome` comes from `pycryptodomex`; Python's base64, HTTP, JSON and threading
+modules are part of the standard library.
 
 
 ## Installation instructions:
 
-1) download
+Install the published archive with WeeWX 5's extension installer:
 
-   wget -O weewx-airQ.zip https://github.com/roe-dl/weewx-airQ/archive/master.zip
+```sh
+weectl extension install https://github.com/weewx-packages/catalog/releases/download/airq/v0.9b3.post20261022/airq-0.9b3.post20261022.tar.gz
+```
 
-2) run the installer
+Use the `weectl` from your WeeWX environment. Add
+`--config /path/to/weewx.conf` when the station configuration is not found
+automatically. Package installations may require `sudo`; activate the WeeWX
+virtual environment for pip installations. Restart your WeeWX service after
+configuration, for example `sudo systemctl restart weewx` on systemd.
+The installer does not restart it for you.
 
-   sudo wee_extension --install weewx-airQ.zip
+The catalog installer adds `user.airQ_corant.AirqUnits` to `prep_services` and
+`user.airQ_corant.AirqService` to `data_services`. It installs
+`airQ_corant.py` and `airq_conf.py` in the station's `bin/user`, without a
+separate top-level `airq_conf` executable. Keep the existing station driver.
 
 3) edit configuration in weewx.conf
 
@@ -63,10 +73,10 @@ python3 -m Cryptodome.SelfTest
            data_services = ... ,user.airQ_corant.AirqService
            ...
    ```
-   
-   The section names can be any name. It need not be something like `[[first_device]]`. We recommend 
+
+   The section names can be any name. It need not be something like `[[first_device]]`. We recommend
    to use some reference to the location of the device like `[[bedroom]]`, `[[livingroom]]`, or the like.
-   
+
 5) restart weewx
 
    ```
@@ -88,22 +98,22 @@ device and can
 Most of the the observation types provided by the airQ device are
 predefined within WeeWX. If no special configuration besides host
 address and password is provided the readings are stored to
-those observation types. 
+those observation types.
 
-If you have more than one airQ device, you need different names of the 
-observation types for each of them. That's the prefix for. 
-Imagine there are 3 airQ devices, one outside, one in the bedroom and 
-one in the living room. Your could configure the outside device without 
-prefix to put `co`, `co2`, `no2`, `noise`, `o3`, `pm1_0`, `pm2_5`, 
-`pm10_0`, and `so2` into the predefined columns of the WeeWX database. 
-For the bedroom device you could set `prefix = bedroom`. So you get 
-`bedroom_co`, `bedroom_co2` etc. for that device. And for the living 
-room device you could set `prefix = livingroom`. So you get 
-`livingroom_co`, `livingroom_co2`, etc. for that. 
+If you have more than one airQ device, you need different names of the
+observation types for each of them. That's the prefix for.
+Imagine there are 3 airQ devices, one outside, one in the bedroom and
+one in the living room. Your could configure the outside device without
+prefix to put `co`, `co2`, `no2`, `noise`, `o3`, `pm1_0`, `pm2_5`,
+`pm10_0`, and `so2` into the predefined columns of the WeeWX database.
+For the bedroom device you could set `prefix = bedroom`. So you get
+`bedroom_co`, `bedroom_co2` etc. for that device. And for the living
+room device you could set `prefix = livingroom`. So you get
+`livingroom_co`, `livingroom_co2`, etc. for that.
 
 ### Adding additional columns to the database
 
-This extension comes with a special configuration tool called `airq_conf`.
+This extension comes with a special configuration tool available as `user.airq_conf`.
 The tool is based on the WeeWX `wee_database` tool and provides means
 to add the necessary columns according to the prefix setting to the
 database or drop them from it. See below for details.
@@ -111,16 +121,16 @@ database or drop them from it. See below for details.
 ### Special cases
 
 If you run several instances of WeeWX and transfer readings from one
-to the other by MQTT, parallel database access, or something, then 
+to the other by MQTT, parallel database access, or something, then
 you also need to install
 weewx-airQ at the target system and include `user.airQ_corant.AirqUnits`
 in line `prep_services`, but omit `user.airQ_corant.AirqService`
-in line `data_services`. 
+in line `data_services`.
 That is because in initialization of the weewx-airQ
 extension several additional units and conversations are
 added to the lists in `units.py` They are neccassary to convert
 between ppm and ppb as well as µg/m<sup>3</sup>, mg/m<sup>3</sup>,
-and g/m<sup>3</sup>, respectively. 
+and g/m<sup>3</sup>, respectively.
 
 ### Display values (CheetahGenerator)
 
@@ -132,7 +142,7 @@ Example: `$current.TVOC`
 
 ### Diagrams (ImageGenerator)
 
-To create diagrams you need to include additional sections into the 
+To create diagrams you need to include additional sections into the
 [ImageGenerator] section of skin.conf. This is an example:
 
 ```
@@ -152,7 +162,7 @@ The result is as follows:
 Dependent on hardware configuration the following observation types
 are provided. The names are given as if no prefix is specified:
 
-* **airqDeviceID**: (provided if included in `[StdWXCalculate]` only) 
+* **airqDeviceID**: (provided if included in `[StdWXCalculate]` only)
   device ID of the device
 * **airqStatus**: (provided if included in `[StdWXCalculate]` only)
   sensor error messages or "OK" if none
@@ -174,13 +184,13 @@ are provided. The names are given as if no prefix is specified:
 * **o2**: O<sub>2</sub> concentration
 * **airqPerfIdx**: performance index (special index according to a newly
   developed algorithm from the manufacturer)
-* **pm1_0**, **pm2_5**, **pm10_0**: particulate matter 
-* **cnt0_3**, **cnt0_5**, **cnt1_0**, **cnt2_5**, **cnt5_0**, **cnt10_0**: 
+* **pm1_0**, **pm2_5**, **pm10_0**: particulate matter
+* **cnt0_3**, **cnt0_5**, **cnt1_0**, **cnt2_5**, **cnt5_0**, **cnt10_0**:
   amount of particles
   of the appropriate size
 * **TypPS**: typical particle size
 * **airqPressure**: air pressure
-* **airqAltimeter** altimeter value (air pressure corrected by altitude, 
+* **airqAltimeter** altimeter value (air pressure corrected by altitude,
   software calculated, not received from the device)
 * **airqBarometer**: barometer value (air pressure corrected by altitude
   and outside temperature, software calculated, not received from the
@@ -188,14 +198,24 @@ are provided. The names are given as if no prefix is specified:
 * **so2**: SO<sub>2</sub> concentration
 * **airqNoise**: sound level
 * **airqTemp**: temperature
-* **TVOC**: volatile organic compounds concentration (including Corona
-  viruses)
+* **TVOC**: volatile organic compounds concentration
 * **airqUptime**: uptime of the device
 
 If a prefix is provided "airq" is replaced by the prefix. If the
 name does not start by "airq" the prefix is prepended to the name.
 
-## Configuration tool `airq_conf`
+## Configuration tool `user.airq_conf`
+
+Use the Python environment running WeeWX. Replace `/path/to/station/bin` with
+the parent of your installed `user` directory:
+
+```sh
+PYTHONPATH=/path/to/station/bin python -m user.airq_conf --help
+```
+
+The reference below uses that invocation. These legacy helper functions depend
+on WeeWX database utility APIs; check `--help` before using them on your version.
+
 
 ### General options
 
@@ -206,9 +226,9 @@ name does not start by "airq" the prefix is prepended to the name.
 
 ### General commands
 
-* `airq_conf --help`:
+* `PYTHONPATH=/path/to/station/bin python -m user.airq_conf --help`:
   display usage instructions
-* `airq_conf --device=DEVICE --print-config`:
+* `PYTHONPATH=/path/to/station/bin python -m user.airq_conf --device=DEVICE --print-config`:
   read the device configuration and display
 
 ### Add or drop columns to/from the database
@@ -224,9 +244,9 @@ good idea. And stop WeeWX for that.
 **CAUTION:** Stop WeeWX and make a backup of the database before using these
 commands.
 
-* `airq_conf --device=DEVICE --add-columns`:
+* `PYTHONPATH=/path/to/station/bin python -m user.airq_conf --device=DEVICE --add-columns`:
   add the necessary columns to the database
-* `airq_conf --device=DEVICE --drop-columns`:
+* `PYTHONPATH=/path/to/station/bin python -m user.airq_conf --device=DEVICE --drop-columns`:
   drop the columns from the database
 
 ### Create a skin
@@ -237,7 +257,7 @@ a separate page for each device configured showing the current readings
 and diagram images. Diagram are only possible for observation types
 that are saved to the database.
 
-* `airq_conf --create-skin`
+* `PYTHONPATH=/path/to/station/bin python -m user.airq_conf --create-skin`
 
 The command does **not** change `weewx.conf`. If you want to use this
 skin you need to add the following section into the `StdReport` section
@@ -271,15 +291,15 @@ Example:
 
 Those commands change configuration settings within the airQ device.
 
-* `airq_conf --device=DEVICE --set-location=station`:
+* `PYTHONPATH=/path/to/station/bin python -m user.airq_conf --device=DEVICE --set-location=station`:
   set the location of the airQ device to the station location
-* `airq_conf --device=DEVICE --set-location=LATITUDE,LOGITUDE`:
+* `PYTHONPATH=/path/to/station/bin python -m user.airq_conf --device=DEVICE --set-location=LATITUDE,LOGITUDE`:
   set the location of the airQ device to latitude and longitude provided
-* `airq_conf --device=DEVICE --set-roomsize=HEIGHT,AREA`:
+* `PYTHONPATH=/path/to/station/bin python -m user.airq_conf --device=DEVICE --set-roomsize=HEIGHT,AREA`:
   set the room size data
-* `airq_conf [--device=DEVICE] --set-ntp=NTP_SERVER`:
+* `PYTHONPATH=/path/to/station/bin python -m user.airq_conf [--device=DEVICE] --set-ntp=NTP_SERVER`:
   set the NTP server
-* `airq_conf [--device=DEVICE] --set-ntp=de`:
+* `PYTHONPATH=/path/to/station/bin python -m user.airq_conf [--device=DEVICE] --set-ntp=de`:
   set the NTP server to the official german server of PTB.
 
 ## Links:
@@ -288,3 +308,13 @@ Those commands change configuration settings within the airQ device.
 * [airQ data sheet (german)](https://uploads-ssl.webflow.com/5bd9feee2fb42232fe1d0196/5f898b110a9e9fea8049fa29_air-Q_Specs_de_aktuell_2020-06-25.pdf)
 * [WeeWX homepage](http://weewx.com) - [WeeWX Wiki](https://github.com/weewx/weewx/wiki)
 * [Wöllsdorf weather conditions](https://www.woellsdorf-wetter.de)
+
+## Upgrade, removal and license
+
+Back up `weewx.conf`, custom templates and databases before installing a newer
+fixed archive. To remove the extension, use `weectl extension uninstall airQ`
+and restart WeeWX. The extension does not automatically add every device
+observation to your archive schema. Prefixes need matching database columns
+and template fields. Device access and sensor accuracy require your hardware.
+
+Johanna Roedenbeck's extension retains its [GPLv3 license](LICENSE).
